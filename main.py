@@ -2,56 +2,65 @@ from functools import lru_cache
 from typing import List
 
 import numpy as np
-import torch
 from fastapi import FastAPI
 from pydantic import BaseModel
-from transformers import BertForSequenceClassification, BertJapaneseTokenizer
+from transformers import BertJapaneseTokenizer, BertModel
+import torch
 
 app = FastAPI()
 
+# https://huggingface.co/sonoisa/sentence-bert-base-ja-mean-tokens-v2
+class SentenceBertJapanese:
+    def __init__(self, model_name_or_path, device=None):
+        self.tokenizer = BertJapaneseTokenizer.from_pretrained(model_name_or_path)
+        self.model = BertModel.from_pretrained(model_name_or_path)
+        self.model.eval()
+
+        if device is None:
+            device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.device = torch.device(device)
+        self.model.to(device)
+
+    def _mean_pooling(self, model_output, attention_mask):
+        token_embeddings = model_output[0] #First element of model_output contains all token embeddings
+        input_mask_expanded = attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
+        return torch.sum(token_embeddings * input_mask_expanded, 1) / torch.clamp(input_mask_expanded.sum(1), min=1e-9)
+
+    @torch.no_grad()
+    def encode(self, sentences, batch_size=8):
+        all_embeddings = []
+        iterator = range(0, len(sentences), batch_size)
+        for batch_idx in iterator:
+            batch = sentences[batch_idx:batch_idx + batch_size]
+
+            encoded_input = self.tokenizer.batch_encode_plus(batch, padding="longest", 
+                                           truncation=True, return_tensors="pt").to(self.device)
+            model_output = self.model(**encoded_input)
+            sentence_embeddings = self._mean_pooling(model_output, encoded_input["attention_mask"]).to('cpu')
+
+            all_embeddings.extend(sentence_embeddings)
+
+        # return torch.stack(all_embeddings).numpy()
+        return torch.stack(all_embeddings)
+
+
+MODEL_NAME = "sonoisa/sentence-bert-base-ja-mean-tokens-v2"
+model = SentenceBertJapanese(MODEL_NAME)
+
+sentences = ["暴走したAI", "暴走した人工知能"]
+sentence_embeddings = model.encode(sentences, batch_size=8)
+
+#print("Sentence embeddings:", sentence_embeddings)
 #
 
-@lru_cache(maxsize=1)
-def get_embedding_model(model_name: str, tokenizer_name: str):
-    tokenizer = BertJapaneseTokenizer.from_pretrained(tokenizer_name)
-
-    model = BertForSequenceClassification.from_pretrained(
-        model_name,
-        num_labels = 2,
-        output_attentions = False,
-        output_hidden_states = True
-    )
-    model.eval()
-
-    return model, tokenizer
-
 def encode(input_text, **args):
-    if args['model'] is not None:
-        model = args['model']
+    sentence_embeddings = model.encode([input_text], batch_size=8)
 
-    if args['tokenizer'] is not None:
-        tokenizer = args['tokenizer']
-    else:
-        tokenizer = model
-
-    model, tokenizer = get_embedding_model(model, tokenizer)
-
-    tokenized_input = tokenizer.tokenize(input_text)
-    indexed_tokens = tokenizer.convert_tokens_to_ids(tokenized_input)
-    tokens_tensor = torch.tensor([indexed_tokens])
-
-    with torch.no_grad():
-        all_encoder_layers = model(tokens_tensor)
-    
-    embeddings = all_encoder_layers[1][-2].numpy()[0]
-    t = np.mean(embeddings, axis=0)
-    t = t.reshape(1, -1)
-
-    return t, len(tokenized_input)
+    return sentence_embeddings, 5
 
 BERT_DEFAULT_SETTINGS = {
-    "model": "cl-tohoku/bert-base-japanese-whole-word-masking",
-    "tokenizer": "cl-tohoku/bert-base-japanese-whole-word-masking"
+    "model": MODEL_NAME,
+    "tokenizer": MODEL_NAME
 }
 
 # OpenAI Embeddings API

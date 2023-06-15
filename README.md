@@ -42,7 +42,7 @@ curl http://127.0.0.1:8000/v1/embeddings \
   -H "Content-Type: application/json" \
   -d '{
     "input": "Your text string goes here",
-    "model": "cl-tohoku/bert-base-japanese-whole-word-masking"
+    "model": "sonoisa/sentence-bert-base-ja-mean-tokens-v2"
   }'
 ```
 
