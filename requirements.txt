@@ -7,4 +7,4 @@ ipadic
 numpy
 torch
 classopt
-huggingface_hub
+huggingface-hub
