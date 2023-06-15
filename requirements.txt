@@ -1,0 +1,8 @@
+fastapi
+pydantic
+uvicorn
+transformers
+fugashi
+ipadic
+numpy
+torch
