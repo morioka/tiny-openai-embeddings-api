@@ -6,3 +6,5 @@ fugashi
 ipadic
 numpy
 torch
+classopt
+huggingface_hub
