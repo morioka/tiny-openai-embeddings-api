@@ -48,4 +48,15 @@ curl http://127.0.0.1:8000/v1/embeddings \
 
 ## License
 
-Everything by [morioka](https://github.com/morioka) is licensed under MIT.
+Everything by [morioka](https://github.com/morioka) is licensed under MIT License.
+
+## TODO
+
+- 完全オフライン化。ファインチューニング済モデルを指定できること
+  - [HuggingFaceモデルをローカルにダウンロード・シンボリックリンクを無効にする| WonderHorn/ふしぎな角笛](https://wonderhorn.net/programming/hfdownload.html)
+  - [Huggingface Transformersのモデルをオフラインで利用する - Qiita](https://qiita.com/suzuki_sh/items/0b43ca942b7294fac16a)
+- モデルはホスト側のディレクトリにあるものをマウントして、外から与えて用いられること
+  - 推論手順が独特の場合、そのコードも外から与えられること
+- [bert-as-service](https://bert-as-service.readthedocs.io/en/latest/) ([code](https://github.com/jina-ai/clip-as-service/tree/bert-as-service)) のような起動方法をサポートすること
+- OpenAI Embeddings APIの仕様を確認する必要があるが、複数個の文を与えることにも対応すること。
+
