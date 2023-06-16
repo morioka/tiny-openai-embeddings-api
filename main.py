@@ -28,6 +28,7 @@ class SentenceBertJapanese:
 
     @torch.no_grad()
     def encode(self, sentences, batch_size=8):
+        num_tokens = 0
         all_embeddings = []
         iterator = range(0, len(sentences), batch_size)
         for batch_idx in iterator:
@@ -40,23 +41,28 @@ class SentenceBertJapanese:
 
             all_embeddings.extend(sentence_embeddings)
 
+            num_tokens += sum(sum(i) for i in encoded_input.attention_mask)
+
         # return torch.stack(all_embeddings).numpy()
-        return torch.stack(all_embeddings)
+        return torch.stack(all_embeddings), num_tokens
 
 
 MODEL_NAME = "sonoisa/sentence-bert-base-ja-mean-tokens-v2"
 model = SentenceBertJapanese(MODEL_NAME)
 
-sentences = ["暴走したAI", "暴走した人工知能"]
-sentence_embeddings = model.encode(sentences, batch_size=8)
-
-#print("Sentence embeddings:", sentence_embeddings)
+#sentences = ["暴走したAI", "暴走した人工知能"]
+#sentence_embeddings = model.encode(sentences, batch_size=8)
 #
+#print("Sentence embeddings:", sentence_embeddings)
+
 
 def encode(input_text, **args):
-    sentence_embeddings = model.encode([input_text], batch_size=8)
+    if type(input_text) == str:
+        input_text = [input_text]
 
-    return sentence_embeddings, 5
+    sentence_embeddings, num_tokens = model.encode(input_text, batch_size=8)
+
+    return sentence_embeddings, num_tokens
 
 BERT_DEFAULT_SETTINGS = {
     "model": MODEL_NAME,
@@ -99,7 +105,7 @@ BERT_DEFAULT_SETTINGS = {
 # copied from https://platform.openai.com/docs/guides/embeddings/what-are-embeddings
 
 class EmbeddingsInput(BaseModel):
-    input: str
+    input: str | List[str]
     model: str
 
 class EmbeddingsOutputData(BaseModel):
@@ -126,15 +132,10 @@ async def embeddings(data: EmbeddingsInput):
     assert model == BERT_DEFAULT_SETTINGS['model']
 
     embeddings, num_tokens = encode(input_text=input, **BERT_DEFAULT_SETTINGS)
-    embedding = embeddings[0].tolist()
 
     return {
         "data": [
-            {
-                "embedding": embedding,
-                "index": 0,
-                "object": "embedding"
-            }
+            { "embedding": e.tolist(), "index": i, "object": "embedding"} for i, e in enumerate(embeddings)
         ],
         "model": model,
         "object": "list",
