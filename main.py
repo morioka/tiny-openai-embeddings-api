@@ -71,11 +71,16 @@ async def embeddings(data: EmbeddingsInput):
 
     assert model == embedding_model.BERT_DEFAULT_SETTINGS['model']
 
-    embeddings, num_tokens = embedding_model.encode(input_text=input, **embedding_model.BERT_DEFAULT_SETTINGS)
+    embeddings, num_tokens = embedding_model.encode(input_text=input, 
+                                                    **embedding_model.BERT_DEFAULT_SETTINGS)
 
     return {
         "data": [
-            { "embedding": e, "index": i, "object": "embedding"} for i, e in enumerate(embeddings)
+            {
+                "embedding": e, 
+                "index": i, 
+                "object": "embedding"
+            } for i, e in enumerate(embeddings)
         ],
         "model": model,
         "object": "list",
