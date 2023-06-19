@@ -5,7 +5,7 @@ import numpy as np
 from fastapi import FastAPI
 from pydantic import BaseModel
 
-import model as embedding_model
+from model import model as embedding_model
 
 app = FastAPI()
 
