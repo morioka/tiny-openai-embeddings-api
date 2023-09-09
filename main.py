@@ -1,10 +1,5 @@
-from functools import lru_cache
-from typing import List
-
-import numpy as np
-
+from typing import List, Annotated
 from pydantic import BaseModel
-from typing import Annotated
 
 from fastapi import Body, FastAPI
 
@@ -73,6 +68,7 @@ class EmbeddingsOutput(BaseModel):
 class SupportedModels(BaseModel):
     models: List[str]
 
+# This is not compatible with OpenAI Embeddings API.
 @app.get('/v1/embeddings_supported_models', response_model=SupportedModels)
 async def supported_models():
     return {

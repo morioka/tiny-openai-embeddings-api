@@ -1,18 +1,12 @@
-from functools import lru_cache
-from typing import List
-
-import numpy as np
-from fastapi import FastAPI
-from pydantic import BaseModel
 from transformers import AutoTokenizer, AutoModel, BertJapaneseTokenizer, BertModel
 import torch
-import torch.nn.functional as F
+#import torch.nn.functional as F
 from torch import Tensor
 
 # https://huggingface.co/sonoisa/sentence-bert-base-ja-mean-tokens-v2
 class SentenceBertJapanese:
-    def __init__(self, model_name_or_path, device=None):
-        self.tokenizer = BertJapaneseTokenizer.from_pretrained(model_name_or_path, cache_dir="/app/download_model")
+    def __init__(self, model_name_or_path, cache_dir="/app/download_model", device=None):
+        self.tokenizer = BertJapaneseTokenizer.from_pretrained(model_name_or_path, cache_dir=cache_dir)
         self.model = BertModel.from_pretrained(model_name_or_path, cache_dir="/app/download_model")
         self.model.eval()
 
@@ -48,9 +42,10 @@ class SentenceBertJapanese:
         # return torch.stack(all_embeddings).numpy()
         return torch.stack(all_embeddings), num_tokens
 
+# https://huggingface.co/intfloat/multilingual-e5-large
 class MultilingualE5:
-    def __init__(self, model_name_or_path, device=None):
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name_or_path, cache_dir="/app/download_model")
+    def __init__(self, model_name_or_path, cache_dir="/app/download_model", device=None):
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name_or_path, cache_dir=cache_dir)
         self.model = AutoModel.from_pretrained(model_name_or_path, cache_dir="/app/download_model")
         self.model.eval()
 
@@ -82,6 +77,9 @@ class MultilingualE5:
 
             sentence_embeddings = self.average_pool(model_output.last_hidden_state, encoded_input['attention_mask'])
 
+            # normalize embeddings
+            #embeddings = F.normalize(sentence_embeddings, p=2, dim=1)
+
             all_embeddings.extend(sentence_embeddings)
 
             num_tokens += sum(sum(i) for i in encoded_input.attention_mask)
@@ -92,6 +90,8 @@ class MultilingualE5:
 model = None
 
 def encode(input_text, pretrained_model_name_or_path, **args):
+
+    assert pretrained_model_name_or_path in args["supported_models"]
 
     global model
     if model is not None and model.model_name_or_path != pretrained_model_name_or_path:
