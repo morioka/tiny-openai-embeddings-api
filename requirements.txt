@@ -8,3 +8,4 @@ numpy
 torch
 classopt
 huggingface-hub
+scikit-learn

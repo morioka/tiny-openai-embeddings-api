@@ -2,12 +2,19 @@ from functools import lru_cache
 from typing import List
 
 import numpy as np
-from fastapi import FastAPI
+
 from pydantic import BaseModel
+from typing import Annotated
 
-from model import model as embedding_model
+from fastapi import Body, FastAPI
 
-app = FastAPI()
+import model as embedding_model
+
+app = FastAPI(
+    title="tiny-openai-embeddings-api",
+    description="OpenAI Embeddings API-style local server, runnig on FastAPI",
+    version="1.0",
+)
 
 # OpenAI Embeddings API
 
@@ -63,15 +70,46 @@ class EmbeddingsOutput(BaseModel):
     object: str
     usage: EmbeddingsOutputUsage
 
+class SupportedModels(BaseModel):
+    models: List[str]
+
+@app.get('/v1/embeddings_supported_models', response_model=SupportedModels)
+async def supported_models():
+    return {
+        "models": embedding_model.BERT_DEFAULT_SETTINGS['supported_models']
+    } 
+
 @app.post('/v1/embeddings', response_model=EmbeddingsOutput)
-async def embeddings(data: EmbeddingsInput):
+async def embeddings(data: Annotated[EmbeddingsInput,
+                            Body(
+                                openapi_examples={
+                                    "sonoisa/sentence-bert":    {
+                                        "summary": "sonoisa/sentence-bert",
+                                        "description": "sonoisa/sentence-bert を使った例 768次元",
+                                        "value": {
+                                            "input": "今日はいい天気です。",
+                                            "model": "sonoisa/sentence-bert-base-ja-mean-tokens-v2"
+                                            }
+                                    },
+                                    "intfloat/multilingaul-e5":    {
+                                        "summary": "intfloat/multilingaul-e5",
+                                        "description": "intfloat/multilingaul-e5 を使った例 1024次元",
+                                        "value": {
+                                            "input": "遠くの山がきれいです。来てよかったです。",
+                                            "model": "intfloat/multilingual-e5-large"
+                                        }
+                                    }
+                                }    
+                            )]
+ ):
 
     model = data.model
     input = data.input
 
-    assert model == embedding_model.BERT_DEFAULT_SETTINGS['model']
+    assert model in embedding_model.BERT_DEFAULT_SETTINGS['supported_models']
 
-    embeddings, num_tokens = embedding_model.encode(input_text=input, 
+    embeddings, num_tokens = embedding_model.encode(input_text=input,
+                                                    pretrained_model_name_or_path=model, 
                                                     **embedding_model.BERT_DEFAULT_SETTINGS)
 
     return {

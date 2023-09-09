@@ -1,7 +1,7 @@
 version: "3.9"
 
 services:
-  whisper-api:
+  embeddings-api:
     image: morioka/tiny-openai-embeddings-api
     build: .
     container_name: embeddings-api
@@ -10,6 +10,9 @@ services:
     ports:
       - 8000:8000
     volumes:
+#      - type: bind
+#        source: "./model"
+#        target: "/app/model"
       - type: bind
-        source: "./model"
-        target: "/app/model"
+        source: "./download_model"
+        target: "/app/download_model"
